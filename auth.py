@@ -1,7 +1,7 @@
 import hashlib, os
 import streamlit as st
 from db import query, query_one, get_connection
-from mysql.connector import Error
+from pymysql import Error
 
 
 def _hash(password: str, salt: bytes) -> str:
@@ -43,8 +43,7 @@ def register(username: str, password: str):
     if conn is None:
         return "Database unavailable."
     try:
-        if not conn.is_connected():
-            conn.reconnect()
+        conn.ping(reconnect=True)
         cur = conn.cursor()
         cur.execute(
             "INSERT INTO users (username, password_hash, currency) VALUES (%s, %s, 1000.00)",
@@ -54,7 +53,7 @@ def register(username: str, password: str):
         cur.close()
         return None
     except Error as e:
-        if e.errno == 1062:
+        if getattr(e, "args", None) and e.args[0] == 1062:
             return "Username already taken."
         return f"Registration failed: {e}"
 

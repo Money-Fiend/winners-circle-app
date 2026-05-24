@@ -1,6 +1,6 @@
-import mysql.connector
-from mysql.connector import Error
-import streamlit as st
+import pymysql
+import pymysql.cursors
+from pymysql import Error
 import streamlit as st
 
 DB_CONFIG = {
@@ -20,8 +20,7 @@ LOSS_PENALTY = 25.00  # $ lost  per player when their team loses
 @st.cache_resource
 def get_connection():
     try:
-        conn = mysql.connector.connect(**DB_CONFIG)
-        conn.database = DB_CONFIG["database"]
+        conn = pymysql.connect(**DB_CONFIG)
         return conn
     except Error as e:
         st.error(f"Could not connect to MySQL: {e}")
@@ -30,8 +29,11 @@ def get_connection():
 
 def _cursor():
     conn = get_connection()
-    if conn and not conn.is_connected():
-        conn.reconnect()
+    if conn:
+        try:
+            conn.ping(reconnect=True)
+        except Exception:
+            pass
     return conn
 
 
