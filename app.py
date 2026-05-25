@@ -52,18 +52,18 @@ from db   import (query, query_one, write, fantasy_points, player_price,
                   ensure_bets_table, ensure_reset_table, moneyline_odds, bet_payout,
                   place_bet, settle_pending_bets)
 
+# One-time DB schema init — must run before auth so registration can use email col
+if not st.session_state.get("_tables_init"):
+    ensure_bets_table()
+    ensure_reset_table()
+    st.session_state["_tables_init"] = True
+
 if not st.session_state.get("logged_in"):
     show_login_page()
     st.stop()
 
 uid      = st.session_state["user_id"]
 username = st.session_state["username"]
-
-# One-time table init per session
-if not st.session_state.get("_bets_init"):
-    ensure_bets_table()
-    ensure_reset_table()
-    st.session_state["_bets_init"] = True
 
 # Process any unresolved game results → update currency & settle bets
 process_currency(uid)
