@@ -4,11 +4,11 @@ from pymysql import Error
 import streamlit as st
 
 DB_CONFIG = {
-    "host": st.secrets["mysql"]["zephyr.proxy.rlwy.net"],
-    "user": st.secrets["mysql"]["root"],
-    "password": st.secrets["mysql"]["Thegoat24!"],
-    "database": st.secrets["mysql"]["railway"],
-    "port": st.secrets["mysql"]["14548"],
+    "host":     st.secrets["mysql"]["host"],
+    "user":     st.secrets["mysql"]["user"],
+    "password": st.secrets["mysql"]["password"],
+    "database": st.secrets["mysql"]["database"],
+    "port":     int(st.secrets["mysql"]["port"]),
 }
 
 ADMIN_PASSWORD = "nfl_admin_2025"
