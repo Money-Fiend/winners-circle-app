@@ -2,6 +2,8 @@ import pymysql
 import pymysql.cursors
 from pymysql import Error
 import streamlit as st
+import random
+import string
 
 DB_CONFIG = {
     "host":     st.secrets["mysql"]["host"],
@@ -116,6 +118,75 @@ def reset_user_rosters():
 
 def reset_bets():
     return write("DELETE FROM bets")
+
+
+# ── Password reset ───────────────────────────────────────────────────────────
+def ensure_reset_table():
+    """Add email column to users (if missing) and create password_resets table."""
+    conn = _cursor()
+    if conn is None:
+        return
+    try:
+        cur = conn.cursor()
+        cur.execute("ALTER TABLE users ADD COLUMN email VARCHAR(255) NULL")
+        conn.commit()
+        cur.close()
+    except Exception:
+        pass  # column already exists — that's fine
+    write("""
+        CREATE TABLE IF NOT EXISTS password_resets (
+            reset_id   INT AUTO_INCREMENT PRIMARY KEY,
+            email      VARCHAR(255) NOT NULL,
+            code       CHAR(6)      NOT NULL,
+            expires_at DATETIME     NOT NULL,
+            used       TINYINT(1)   NOT NULL DEFAULT 0,
+            INDEX idx_pr_email (email)
+        )
+    """)
+
+
+def email_exists(email: str) -> bool:
+    row = query_one(
+        "SELECT user_id FROM users WHERE email=%s", (email.lower().strip(),)
+    )
+    return row is not None
+
+
+def store_reset_code(email: str) -> str:
+    """Generate a 6-digit code, save it with a 15-min expiry, return it."""
+    code = "".join(random.choices(string.digits, k=6))
+    write("DELETE FROM password_resets WHERE email=%s", (email.lower().strip(),))
+    write("""
+        INSERT INTO password_resets (email, code, expires_at)
+        VALUES (%s, %s, DATE_ADD(NOW(), INTERVAL 15 MINUTE))
+    """, (email.lower().strip(), code))
+    return code
+
+
+def verify_reset_code(email: str, code: str) -> bool:
+    """Return True if code is valid + unexpired. Marks it used on success."""
+    row = query_one("""
+        SELECT reset_id FROM password_resets
+        WHERE email=%s AND code=%s AND used=0 AND expires_at > NOW()
+    """, (email.lower().strip(), code.strip()))
+    if row:
+        write("UPDATE password_resets SET used=1 WHERE reset_id=%s", (row[0],))
+        return True
+    return False
+
+
+def update_password_by_email(email: str, new_hash: str) -> bool:
+    """Update the user's password_hash by email. Returns False if not found."""
+    row = query_one(
+        "SELECT user_id FROM users WHERE email=%s", (email.lower().strip(),)
+    )
+    if not row:
+        return False
+    write(
+        "UPDATE users SET password_hash=%s WHERE email=%s",
+        (new_hash, email.lower().strip()),
+    )
+    return True
 
 
 # ── Moneyline betting ─────────────────────────────────────────────────────────

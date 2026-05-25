@@ -49,7 +49,7 @@ from db   import (query, query_one, write, fantasy_points, player_price,
                   process_currency, ADMIN_PASSWORD,
                   reset_player_stats, reset_team_records, reset_game_scores,
                   reset_all_games, reset_user_currency, reset_user_rosters, reset_bets,
-                  ensure_bets_table, moneyline_odds, bet_payout,
+                  ensure_bets_table, ensure_reset_table, moneyline_odds, bet_payout,
                   place_bet, settle_pending_bets)
 
 if not st.session_state.get("logged_in"):
@@ -62,6 +62,7 @@ username = st.session_state["username"]
 # One-time table init per session
 if not st.session_state.get("_bets_init"):
     ensure_bets_table()
+    ensure_reset_table()
     st.session_state["_bets_init"] = True
 
 # Process any unresolved game results → update currency & settle bets
